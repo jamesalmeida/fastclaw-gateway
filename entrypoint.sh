@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Fix volume permissions (Railway mounts as root)
+if [ "$(id -u)" = "0" ]; then
+  chown -R node:node /home/node/.openclaw 2>/dev/null || true
+  exec su -s /bin/bash node -- "$0" "$@"
+fi
+
 CONFIG_DIR="$HOME/.openclaw"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 WORKSPACE="$CONFIG_DIR/workspace"

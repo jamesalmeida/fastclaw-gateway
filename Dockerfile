@@ -28,7 +28,11 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Copy default workspace files
 COPY workspace/ /home/node/.openclaw/default-workspace/
 
-USER node
+# Fix permissions for volume mount
+RUN chown -R node:node /home/node/.openclaw
+
+# Entrypoint runs as root to fix volume permissions, then drops to node
+# (Railway volumes mount as root)
 WORKDIR /home/node/.openclaw/workspace
 
 EXPOSE 18789
