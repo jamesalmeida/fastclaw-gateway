@@ -130,7 +130,24 @@ if [ -f "$CONFIG_FILE" ]; then
   echo "$UPDATED" > "$CONFIG_FILE"
   echo "[fastclaw] Gateway password: $GATEWAY_TOKEN"
   echo "[fastclaw] Starting OpenClaw gateway..."
-  exec openclaw gateway --force
+  
+  openclaw gateway --force &
+  GATEWAY_PID=$!
+  (
+    sleep 5
+    while kill -0 $GATEWAY_PID 2>/dev/null; do
+      PENDING=$(openclaw devices list --json 2>/dev/null | jq -r '.pending[]?.requestId // empty' 2>/dev/null)
+      if [ -n "$PENDING" ]; then
+        for reqId in $PENDING; do
+          echo "[fastclaw] Auto-approving device: $reqId"
+          openclaw devices approve "$reqId" 2>/dev/null || true
+        done
+      fi
+      sleep 3
+    done
+  ) &
+  wait $GATEWAY_PID
+  exit $?
 fi
 
 # Generate a gateway token if not provided
@@ -172,5 +189,25 @@ echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
 echo "[fastclaw] Starting OpenClaw gateway..."
 
-# Start the gateway
-exec openclaw gateway --force
+# Start the gateway in background, then auto-approve any device pairing requests
+openclaw gateway --force &
+GATEWAY_PID=$!
+
+# Wait for gateway to be ready, then auto-approve devices in a loop
+(
+  sleep 5
+  echo "[fastclaw] Starting device auto-approver..."
+  while kill -0 $GATEWAY_PID 2>/dev/null; do
+    # Auto-approve any pending device requests
+    PENDING=$(openclaw devices list --json 2>/dev/null | jq -r '.pending[]?.requestId // empty' 2>/dev/null)
+    if [ -n "$PENDING" ]; then
+      for reqId in $PENDING; do
+        echo "[fastclaw] Auto-approving device: $reqId"
+        openclaw devices approve "$reqId" 2>/dev/null || true
+      done
+    fi
+    sleep 3
+  done
+) &
+
+wait $GATEWAY_PID
