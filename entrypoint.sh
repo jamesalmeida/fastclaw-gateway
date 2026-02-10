@@ -125,8 +125,8 @@ fi
 if [ -f "$CONFIG_FILE" ]; then
   echo "[fastclaw] Existing config found, updating auth and reusing"
   GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(cat "$CONFIG_FILE" | jq -r '.gateway.auth.password // .gateway.auth.token // empty')}"
-  # Update to password auth mode
-  UPDATED=$(cat "$CONFIG_FILE" | jq --arg pw "$GATEWAY_TOKEN" '.gateway.auth = { "mode": "password", "password": $pw }')
+  # Update auth and controlUi settings
+  UPDATED=$(cat "$CONFIG_FILE" | jq --arg tok "$GATEWAY_TOKEN" '.gateway.auth = { "mode": "token", "token": $tok } | .gateway.controlUi.allowInsecureAuth = true')
   echo "$UPDATED" > "$CONFIG_FILE"
   echo "[fastclaw] Gateway password: $GATEWAY_TOKEN"
   echo "[fastclaw] Starting OpenClaw gateway..."
@@ -160,9 +160,12 @@ cat > "$CONFIG_FILE" << JSONEOF
     "mode": "local",
     "bind": "lan",
     "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+    "controlUi": {
+      "allowInsecureAuth": true
+    },
     "auth": {
-      "mode": "password",
-      "password": "$GATEWAY_TOKEN"
+      "mode": "token",
+      "token": "$GATEWAY_TOKEN"
     }
   },
   "ui": {
