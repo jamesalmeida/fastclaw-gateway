@@ -2,42 +2,37 @@
 set -e
 
 # Fix volume permissions (Railway mounts as root)
-if [ "$(id -u)" = "0" ]; then
-  chown -R node:node /home/node/.openclaw 2>/dev/null || true
-  exec su -s /bin/bash node -- "$0" "$@"
+chown -R openclaw:openclaw /data 2>/dev/null || true
+
+STATE_DIR="/data/.openclaw"
+WORKSPACE_DIR="/data/workspace"
+CONFIG_FILE="$STATE_DIR/openclaw.json"
+
+mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
+
+# Copy default workspace files if empty
+if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
+  echo "[fastclaw] Copying default workspace files..."
+  cp -r /home/openclaw/.openclaw/default-workspace/* "$WORKSPACE_DIR/" 2>/dev/null || true
 fi
 
-CONFIG_DIR="$HOME/.openclaw"
-CONFIG_FILE="$CONFIG_DIR/openclaw.json"
-WORKSPACE="$CONFIG_DIR/workspace"
-
-# Copy default workspace files if workspace is empty
-if [ -d "$CONFIG_DIR/default-workspace" ] && [ -z "$(ls -A "$WORKSPACE" 2>/dev/null)" ]; then
-  cp -r "$CONFIG_DIR/default-workspace/." "$WORKSPACE/"
-  echo "[fastclaw] Initialized workspace with default files"
-fi
-
-# ─── Required env vars ───
+# Validate tier
 if [ -z "$FASTCLAW_TIER" ]; then
   echo "[fastclaw] ERROR: FASTCLAW_TIER is required (basic|pro|premium)"
   exit 1
 fi
 
-# ─── Build config from env vars ───
 echo "[fastclaw] Building config for tier: $FASTCLAW_TIER"
 
-# Determine default model based on tier
+# Determine default model per tier
 case "$FASTCLAW_TIER" in
   basic)
-    # Basic tier: user brings their own key, we set a sensible default
-    DEFAULT_MODEL="${FASTCLAW_MODEL:-anthropic/claude-sonnet-4-20250514}"
+    DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
     ;;
   pro)
-    # Pro tier: Kimi K2 included (free model)
     DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
     ;;
   premium)
-    # Premium tier: Kimi K2 (included), Claude available with BYOK
     DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
     ;;
   *)
@@ -46,123 +41,55 @@ case "$FASTCLAW_TIER" in
     ;;
 esac
 
-# ─── Build providers block ───
-PROVIDERS="{}"
+# Generate a gateway token if not provided
+GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)}"
+echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
 
-# Anthropic (for basic BYOK or premium)
+# Build providers block
+PROVIDERS='{}'
+
 if [ -n "$ANTHROPIC_API_KEY" ]; then
   PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$ANTHROPIC_API_KEY" '. + {
-    "anthropic": {
-      "apiKey": $key
-    }
+    "anthropic": { "apiKey": $key }
   }')
 fi
 
-# OpenAI (optional BYOK)
 if [ -n "$OPENAI_API_KEY" ]; then
   PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$OPENAI_API_KEY" '. + {
-    "openai": {
-      "apiKey": $key
-    }
+    "openai": { "apiKey": $key }
   }')
 fi
 
-# Moonshot / Kimi K2 (pro tier gets this by default)
 if [ -n "$MOONSHOT_API_KEY" ]; then
   PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$MOONSHOT_API_KEY" '. + {
     "moonshot": {
       "baseUrl": "https://api.moonshot.ai/v1",
       "api": "openai-completions",
       "apiKey": $key,
-      "models": [{
-        "id": "kimi-k2-0905-preview",
-        "name": "Kimi K2",
-        "reasoning": false,
-        "input": ["text"],
-        "cost": { "input": 0, "output": 0 }
-      }]
+      "models": [
+        {
+          "id": "kimi-k2-0905-preview",
+          "name": "Kimi K2",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0 }
+        }
+      ]
     }
   }')
 fi
 
-# ─── Build channel config ───
-CHANNELS="{}"
+# Bot name/avatar
+BOT_NAME="${FASTCLAW_BOT_NAME:-Assistant}"
+BOT_AVATAR="${FASTCLAW_BOT_AVATAR:-🤖}"
 
-# WhatsApp
-if [ -n "$WHATSAPP_PHONE_ID" ]; then
-  CHANNELS=$(echo "$CHANNELS" | jq \
-    --arg phoneId "$WHATSAPP_PHONE_ID" \
-    --arg token "$WHATSAPP_TOKEN" \
-    --arg verifyToken "$WHATSAPP_VERIFY_TOKEN" \
-    --arg webhookSecret "$WHATSAPP_WEBHOOK_SECRET" \
-    --arg allowFrom "${WHATSAPP_ALLOW_FROM:-}" \
-    '. + {
-      "whatsapp": {
-        "phoneNumberId": $phoneId,
-        "accessToken": $token,
-        "verifyToken": $verifyToken,
-        "webhookSecret": $webhookSecret,
-        "allowFrom": (if $allowFrom != "" then ($allowFrom | split(",")) else [] end)
-      }
-    }')
-fi
-
-# Telegram
-if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-  CHANNELS=$(echo "$CHANNELS" | jq \
-    --arg token "$TELEGRAM_BOT_TOKEN" \
-    --arg allowFrom "${TELEGRAM_ALLOW_FROM:-}" \
-    '. + {
-      "telegram": {
-        "botToken": $token,
-        "allowFrom": (if $allowFrom != "" then ($allowFrom | split(",") | map(tonumber)) else [] end)
-      }
-    }')
-fi
-
-# ─── Build the full config ───
-# If config already exists (from volume), update password and reuse
-if [ -f "$CONFIG_FILE" ]; then
-  echo "[fastclaw] Existing config found, updating auth and reusing"
-  GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(cat "$CONFIG_FILE" | jq -r '.gateway.auth.password // .gateway.auth.token // empty')}"
-  # Update auth and controlUi settings
-  UPDATED=$(cat "$CONFIG_FILE" | jq --arg tok "$GATEWAY_TOKEN" '.gateway.auth = { "mode": "token", "token": $tok } | .gateway.controlUi.allowInsecureAuth = true')
-  echo "$UPDATED" > "$CONFIG_FILE"
-  echo "[fastclaw] Gateway password: $GATEWAY_TOKEN"
-  echo "[fastclaw] Starting OpenClaw gateway..."
-  
-  openclaw gateway --force &
-  GATEWAY_PID=$!
-  (
-    sleep 5
-    while kill -0 $GATEWAY_PID 2>/dev/null; do
-      PENDING=$(openclaw devices list --json 2>/dev/null | jq -r '.pending[]?.requestId // empty' 2>/dev/null)
-      if [ -n "$PENDING" ]; then
-        for reqId in $PENDING; do
-          echo "[fastclaw] Auto-approving device: $reqId"
-          openclaw devices approve "$reqId" 2>/dev/null || true
-        done
-      fi
-      sleep 3
-    done
-  ) &
-  wait $GATEWAY_PID
-  exit $?
-fi
-
-# Generate a gateway token if not provided
-GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)}"
-echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
-
+# Always regenerate config (gateway binds to loopback, proxy handles public traffic)
 cat > "$CONFIG_FILE" << JSONEOF
 {
   "gateway": {
     "mode": "local",
-    "bind": "lan",
-    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
-    "controlUi": {
-      "allowInsecureAuth": true
-    },
+    "bind": "loopback",
+    "port": ${INTERNAL_GATEWAY_PORT:-18789},
     "auth": {
       "mode": "token",
       "token": "$GATEWAY_TOKEN"
@@ -170,8 +97,8 @@ cat > "$CONFIG_FILE" << JSONEOF
   },
   "ui": {
     "assistant": {
-      "name": "${FASTCLAW_BOT_NAME:-Assistant}",
-      "avatar": "${FASTCLAW_BOT_AVATAR:-🤖}"
+      "name": "$BOT_NAME",
+      "avatar": "$BOT_AVATAR"
     }
   },
   "models": {
@@ -182,36 +109,56 @@ cat > "$CONFIG_FILE" << JSONEOF
       "model": {
         "primary": "$DEFAULT_MODEL"
       },
-      "workspace": "$WORKSPACE"
+      "workspace": "$WORKSPACE_DIR"
     }
   },
-  "channels": $(echo "$CHANNELS" | jq -c .)
+  "channels": {}
 }
 JSONEOF
 
+chown -R openclaw:openclaw "$STATE_DIR" "$WORKSPACE_DIR"
+
 echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
-echo "[fastclaw] Starting OpenClaw gateway..."
+echo "[fastclaw] Tier: $FASTCLAW_TIER"
+echo "[fastclaw] Gateway binds to loopback:${INTERNAL_GATEWAY_PORT:-18789}"
+echo "[fastclaw] Proxy on public port: ${PORT:-8080}"
 
-# Start the gateway in background, then auto-approve any device pairing requests
-openclaw gateway --force &
+# Export for OpenClaw
+export HOME="/home/openclaw"
+export OPENCLAW_STATE_DIR="$STATE_DIR"
+export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
+export OPENCLAW_GATEWAY_TOKEN="$GATEWAY_TOKEN"
+
+# Start gateway on loopback (as openclaw user)
+echo "[fastclaw] Starting OpenClaw gateway..."
+gosu openclaw node /usr/local/lib/node_modules/openclaw/dist/entry.js gateway run \
+  --bind loopback \
+  --port "${INTERNAL_GATEWAY_PORT:-18789}" \
+  --auth token \
+  --token "$GATEWAY_TOKEN" &
 GATEWAY_PID=$!
 
-# Wait for gateway to be ready, then auto-approve devices in a loop
-(
-  sleep 5
-  echo "[fastclaw] Starting device auto-approver..."
-  while kill -0 $GATEWAY_PID 2>/dev/null; do
-    # Auto-approve any pending device requests
-    PENDING=$(openclaw devices list --json 2>/dev/null | jq -r '.pending[]?.requestId // empty' 2>/dev/null)
-    if [ -n "$PENDING" ]; then
-      for reqId in $PENDING; do
-        echo "[fastclaw] Auto-approving device: $reqId"
-        openclaw devices approve "$reqId" 2>/dev/null || true
-      done
-    fi
-    sleep 3
-  done
-) &
+# Wait for gateway to be ready
+echo "[fastclaw] Waiting for gateway to be ready..."
+for i in $(seq 1 60); do
+  if curl -sf http://127.0.0.1:${INTERNAL_GATEWAY_PORT:-18789}/ > /dev/null 2>&1; then
+    echo "[fastclaw] Gateway is ready!"
+    break
+  fi
+  sleep 1
+done
 
-wait $GATEWAY_PID
+# Start reverse proxy on public port (as openclaw user)
+echo "[fastclaw] Starting reverse proxy on port ${PORT:-8080}..."
+gosu openclaw node /app/server.js &
+PROXY_PID=$!
+
+# Wait for either to exit
+wait -n $GATEWAY_PID $PROXY_PID
+EXIT_CODE=$?
+echo "[fastclaw] Process exited with code $EXIT_CODE"
+
+# Kill the other process
+kill $GATEWAY_PID $PROXY_PID 2>/dev/null || true
+exit $EXIT_CODE

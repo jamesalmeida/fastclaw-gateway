@@ -1,40 +1,44 @@
-FROM node:22-slim
+FROM node:22-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/jamesalmeida/fastclaw-gateway"
 LABEL org.opencontainers.image.description="Actually Useful AI — managed OpenClaw gateway"
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git ca-certificates jq lsof \
+    curl git ca-certificates jq gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install OpenClaw globally
 RUN npm install -g openclaw@latest
 
-# Pre-install common skills
-RUN npm install -g \
-    @openclaw/skill-weather \
-    @openclaw/skill-summarize \
-    2>/dev/null || true
+# Create app directory for the proxy server
+WORKDIR /app
+COPY proxy/package.json proxy/pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
-# Create workspace & config directories
-RUN mkdir -p /home/node/.openclaw/workspace \
-    && chown -R node:node /home/node/.openclaw
+COPY proxy/server.js ./server.js
 
 # Copy entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# Create user and directories
+RUN useradd -m -s /bin/bash openclaw \
+    && mkdir -p /data && chown openclaw:openclaw /data \
+    && mkdir -p /home/openclaw/.openclaw/workspace \
+    && chown -R openclaw:openclaw /home/openclaw/.openclaw
+
 # Copy default workspace files
-COPY workspace/ /home/node/.openclaw/default-workspace/
+COPY workspace/ /home/openclaw/.openclaw/default-workspace/
+RUN chown -R openclaw:openclaw /home/openclaw/.openclaw/default-workspace
 
-# Fix permissions for volume mount
-RUN chown -R node:node /home/node/.openclaw
+WORKDIR /home/openclaw/.openclaw/workspace
 
-# Entrypoint runs as root to fix volume permissions, then drops to node
-# (Railway volumes mount as root)
-WORKDIR /home/node/.openclaw/workspace
+ENV PORT=8080
+ENV INTERNAL_GATEWAY_PORT=18789
+EXPOSE 8080
 
-EXPOSE 18789
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
+  CMD curl -f http://localhost:8080/healthz || exit 1
 
 ENTRYPOINT ["entrypoint.sh"]
