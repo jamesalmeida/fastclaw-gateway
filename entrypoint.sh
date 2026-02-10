@@ -121,11 +121,14 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
 fi
 
 # ─── Build the full config ───
-# If config already exists (from volume), reuse it
+# If config already exists (from volume), update password and reuse
 if [ -f "$CONFIG_FILE" ]; then
-  echo "[fastclaw] Existing config found, reusing"
-  GATEWAY_TOKEN=$(cat "$CONFIG_FILE" | jq -r '.gateway.auth.token // empty')
-  echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
+  echo "[fastclaw] Existing config found, updating auth and reusing"
+  GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(cat "$CONFIG_FILE" | jq -r '.gateway.auth.password // .gateway.auth.token // empty')}"
+  # Update to password auth mode
+  UPDATED=$(cat "$CONFIG_FILE" | jq --arg pw "$GATEWAY_TOKEN" '.gateway.auth = { "mode": "password", "password": $pw }')
+  echo "$UPDATED" > "$CONFIG_FILE"
+  echo "[fastclaw] Gateway password: $GATEWAY_TOKEN"
   echo "[fastclaw] Starting OpenClaw gateway..."
   exec openclaw gateway --force
 fi
@@ -140,8 +143,8 @@ cat > "$CONFIG_FILE" << JSONEOF
     "mode": "local",
     "bind": "lan",
     "auth": {
-      "mode": "token",
-      "token": "$GATEWAY_TOKEN"
+      "mode": "password",
+      "password": "$GATEWAY_TOKEN"
     }
   },
   "ui": {
