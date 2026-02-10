@@ -14,7 +14,7 @@ const GATEWAY_TARGET = `http://127.0.0.1:${GATEWAY_PORT}`;
 const proxy = httpProxy.createProxyServer({
   target: GATEWAY_TARGET,
   ws: true,
-  changeOrigin: false, // keep origin for OpenClaw
+  changeOrigin: true, // rewrite Host header to 127.0.0.1 so OpenClaw sees local
 });
 
 proxy.on("error", (err, _req, res) => {
