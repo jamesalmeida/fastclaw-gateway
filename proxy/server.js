@@ -25,6 +25,14 @@ proxy.on("error", (err, _req, res) => {
   }
 });
 
+// Strip proxy headers so OpenClaw sees connections as local
+function stripProxyHeaders(req) {
+  delete req.headers["x-forwarded-for"];
+  delete req.headers["x-forwarded-proto"];
+  delete req.headers["x-forwarded-host"];
+  delete req.headers["x-real-ip"];
+}
+
 const server = http.createServer((req, res) => {
   // Health check endpoint
   if (req.url === "/healthz") {
@@ -32,10 +40,12 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ ok: true }));
     return;
   }
+  stripProxyHeaders(req);
   proxy.web(req, res);
 });
 
 server.on("upgrade", (req, socket, head) => {
+  stripProxyHeaders(req);
   proxy.ws(req, socket, head);
 });
 
