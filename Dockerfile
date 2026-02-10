@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.description="Actually Useful AI — managed OpenC
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git ca-certificates jq \
+    curl git ca-certificates jq lsof \
     && rm -rf /var/lib/apt/lists/*
 
 # Install OpenClaw globally

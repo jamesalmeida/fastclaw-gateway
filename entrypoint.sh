@@ -115,8 +115,20 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
 fi
 
 # ─── Build the full config ───
+# Generate a gateway token if not provided
+GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)}"
+echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
+
 cat > "$CONFIG_FILE" << JSONEOF
 {
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "auth": {
+      "mode": "token",
+      "token": "$GATEWAY_TOKEN"
+    }
+  },
   "ui": {
     "assistant": {
       "name": "${FASTCLAW_BOT_NAME:-Assistant}",
@@ -128,7 +140,9 @@ cat > "$CONFIG_FILE" << JSONEOF
   },
   "agents": {
     "defaults": {
-      "model": "$DEFAULT_MODEL",
+      "model": {
+        "primary": "$DEFAULT_MODEL"
+      },
       "workspace": "$WORKSPACE"
     }
   },
@@ -141,4 +155,4 @@ echo "[fastclaw] Default model: $DEFAULT_MODEL"
 echo "[fastclaw] Starting OpenClaw gateway..."
 
 # Start the gateway
-exec openclaw gateway start --foreground
+exec openclaw gateway --force
