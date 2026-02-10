@@ -37,8 +37,8 @@ case "$FASTCLAW_TIER" in
     DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
     ;;
   premium)
-    # Premium tier: Claude with K2 fallback
-    DEFAULT_MODEL="${FASTCLAW_MODEL:-anthropic/claude-sonnet-4-20250514}"
+    # Premium tier: Kimi K2 (included), Claude available with BYOK
+    DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
     ;;
   *)
     echo "[fastclaw] ERROR: Unknown tier '$FASTCLAW_TIER'. Use basic|pro|premium"
