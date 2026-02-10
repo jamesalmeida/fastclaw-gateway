@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  gateway:
+    build: .
+    ports:
+      - "18789:18789"
+    volumes:
+      - gateway-data:/home/node/.openclaw
+    environment:
+      - FASTCLAW_TIER=${FASTCLAW_TIER:-pro}
+      - FASTCLAW_BOT_NAME=${FASTCLAW_BOT_NAME:-Assistant}
+      - FASTCLAW_BOT_AVATAR=${FASTCLAW_BOT_AVATAR:-🤖}
+      - FASTCLAW_MODEL=${FASTCLAW_MODEL:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MOONSHOT_API_KEY=${MOONSHOT_API_KEY:-}
+      - WHATSAPP_PHONE_ID=${WHATSAPP_PHONE_ID:-}
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN:-}
+      - WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN:-}
+      - WHATSAPP_WEBHOOK_SECRET=${WHATSAPP_WEBHOOK_SECRET:-}
+      - WHATSAPP_ALLOW_FROM=${WHATSAPP_ALLOW_FROM:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALLOW_FROM=${TELEGRAM_ALLOW_FROM:-}
+    restart: unless-stopped
+
+volumes:
+  gateway-data:
