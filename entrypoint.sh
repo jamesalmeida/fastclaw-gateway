@@ -121,6 +121,15 @@ if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
 fi
 
 # ─── Build the full config ───
+# If config already exists (from volume), reuse it
+if [ -f "$CONFIG_FILE" ]; then
+  echo "[fastclaw] Existing config found, reusing"
+  GATEWAY_TOKEN=$(cat "$CONFIG_FILE" | jq -r '.gateway.auth.token // empty')
+  echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
+  echo "[fastclaw] Starting OpenClaw gateway..."
+  exec openclaw gateway --force
+fi
+
 # Generate a gateway token if not provided
 GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)}"
 echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
