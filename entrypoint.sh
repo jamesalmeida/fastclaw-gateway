@@ -159,6 +159,7 @@ cat > "$CONFIG_FILE" << JSONEOF
   "gateway": {
     "mode": "local",
     "bind": "lan",
+    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
     "auth": {
       "mode": "password",
       "password": "$GATEWAY_TOKEN"
