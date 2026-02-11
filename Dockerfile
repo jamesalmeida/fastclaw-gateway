@@ -30,15 +30,15 @@ RUN set -eux; \
     rm -rf /tmp/gog-extract /tmp/gog.tar.gz
 
 RUN set -eux; \
-    HIMALAYA_URL="$(curl -fsSL "https://api.github.com/repos/pimalaya/himalaya/releases/latest" | jq -r '.assets[] | select(.name | test("(x86_64|amd64).*(linux).*\\.tar\\.gz$"; "i")) | .browser_download_url' | head -n1)"; \
+    HIMALAYA_URL="$(curl -fsSL "https://api.github.com/repos/pimalaya/himalaya/releases/latest" | jq -r '.assets[] | select(.name == "himalaya.x86_64-linux.tgz") | .browser_download_url')"; \
     test -n "${HIMALAYA_URL}"; \
     mkdir -p /tmp/himalaya-extract; \
-    curl -fsSL "${HIMALAYA_URL}" -o /tmp/himalaya.tar.gz; \
-    tar -xzf /tmp/himalaya.tar.gz -C /tmp/himalaya-extract; \
+    curl -fsSL "${HIMALAYA_URL}" -o /tmp/himalaya.tgz; \
+    tar -xzf /tmp/himalaya.tgz -C /tmp/himalaya-extract; \
     HIMALAYA_BIN="$(find /tmp/himalaya-extract -type f -name himalaya | head -n1)"; \
     test -n "${HIMALAYA_BIN}"; \
     install -m 0755 "${HIMALAYA_BIN}" /usr/local/bin/himalaya; \
-    rm -rf /tmp/himalaya-extract /tmp/himalaya.tar.gz
+    rm -rf /tmp/himalaya-extract /tmp/himalaya.tgz
 
 # Install OpenClaw globally
 RUN npm install -g openclaw@latest @google/gemini-cli @steipete/summarize
