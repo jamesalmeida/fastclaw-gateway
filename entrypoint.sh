@@ -90,6 +90,9 @@ cat > "$CONFIG_FILE" << JSONEOF
     "mode": "local",
     "bind": "loopback",
     "port": ${INTERNAL_GATEWAY_PORT:-18789},
+    "controlUi": {
+      "allowedOrigins": ["https://${RAILWAY_PUBLIC_DOMAIN:-localhost}"]
+    },
     "auth": {
       "mode": "token",
       "token": "$GATEWAY_TOKEN"
