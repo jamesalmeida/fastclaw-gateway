@@ -114,6 +114,11 @@ cat > "$CONFIG_FILE" << JSONEOF
       "avatar": "$BOT_AVATAR"
     }
   },
+  "update": {
+    "channel": "stable",
+    "checkOnStart": false,
+    "autoUpdate": false
+  },
   "models": {
     "providers": $(echo "$PROVIDERS" | jq -c .)
   },
