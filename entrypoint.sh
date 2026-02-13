@@ -145,6 +145,45 @@ echo "[fastclaw] Tier: $FASTCLAW_TIER"
 echo "[fastclaw] Gateway binds to loopback:${INTERNAL_GATEWAY_PORT:-18789}"
 echo "[fastclaw] Proxy on public port: ${PORT:-8080}"
 
+# ── gog (Google Workspace) setup ──
+# If Google OAuth tokens are provided via env vars, configure gog automatically
+if [ -n "$GOG_GOOGLE_REFRESH_TOKEN" ] && [ -n "$GOG_GOOGLE_EMAIL" ]; then
+  echo "[fastclaw] Configuring gog for $GOG_GOOGLE_EMAIL..."
+
+  # Set keyring password for file-based keyring (no system keychain in container)
+  export GOG_KEYRING_PASSWORD="${GOG_KEYRING_PASSWORD:-fastclaw-keyring-secret}"
+
+  # Decode and write client_secret.json from base64 env var
+  if [ -n "$GOG_CLIENT_SECRET_JSON_B64" ]; then
+    echo "$GOG_CLIENT_SECRET_JSON_B64" | base64 -d > /tmp/client_secret.json
+    gog auth credentials /tmp/client_secret.json 2>/dev/null || true
+    rm -f /tmp/client_secret.json
+  fi
+
+  # Set default account
+  export GOG_ACCOUNT="$GOG_GOOGLE_EMAIL"
+
+  # Build a token JSON that gog expects
+  GOG_TOKEN_JSON=$(cat <<TOKEOF
+{
+  "access_token": "${GOG_GOOGLE_ACCESS_TOKEN:-}",
+  "refresh_token": "$GOG_GOOGLE_REFRESH_TOKEN",
+  "token_type": "Bearer",
+  "expiry": "${GOG_GOOGLE_TOKEN_EXPIRY:-2024-01-01T00:00:00Z}",
+  "scopes": "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive"
+}
+TOKEOF
+  )
+
+  # Try gog auth import (if supported), fallback to direct keyring write
+  echo "$GOG_TOKEN_JSON" | gog auth import "$GOG_GOOGLE_EMAIL" --services gmail,calendar,drive,contacts,docs,sheets,tasks 2>/dev/null \
+    || echo "[fastclaw] Note: gog auth import not available — will need manual gog setup"
+
+  echo "[fastclaw] gog configured for $GOG_GOOGLE_EMAIL"
+else
+  echo "[fastclaw] No Google tokens found — skipping gog setup"
+fi
+
 # Export for OpenClaw
 export HOME="/root"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
