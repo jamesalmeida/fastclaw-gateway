@@ -116,8 +116,7 @@ cat > "$CONFIG_FILE" << JSONEOF
   },
   "update": {
     "channel": "stable",
-    "checkOnStart": false,
-    "autoUpdate": false
+    "checkOnStart": false
   },
   "models": {
     "providers": $(echo "$PROVIDERS" | jq -c .)
