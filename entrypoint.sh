@@ -42,7 +42,7 @@ elif [ -n "$MOONSHOT_API_KEY" ]; then
 elif [ -n "$GOOGLE_API_KEY" ]; then
   DEFAULT_MODEL="google/gemini-2.5-flash"         # cheapest paid
 elif [ -n "$XAI_API_KEY" ]; then
-  DEFAULT_MODEL="xai/grok-4-1-fast-non-reasoning"  # cheapest xAI model
+  DEFAULT_MODEL="xai/grok-4-1-fast-reasoning"  # cheapest xAI model, reasoning enabled
 elif [ -n "$OPENAI_API_KEY" ]; then
   DEFAULT_MODEL="openai/gpt-4o"
 elif [ -n "$ANTHROPIC_API_KEY" ]; then
