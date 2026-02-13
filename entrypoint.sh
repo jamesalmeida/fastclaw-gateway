@@ -59,17 +59,10 @@ echo "[fastclaw] Gateway token: $GATEWAY_TOKEN"
 # Build providers block
 PROVIDERS='{}'
 
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$ANTHROPIC_API_KEY" '. + {
-    "anthropic": { "apiKey": $key }
-  }')
-fi
-
-if [ -n "$OPENAI_API_KEY" ]; then
-  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$OPENAI_API_KEY" '. + {
-    "openai": { "apiKey": $key }
-  }')
-fi
+# Anthropic and OpenAI are built-in providers in OpenClaw — they auto-discover
+# from env vars. Don't add them to the custom providers block or OpenClaw will
+# require baseUrl/models fields. Just export the env vars and they'll work.
+# ANTHROPIC_API_KEY and OPENAI_API_KEY are already set in the environment.
 
 if [ -n "$MOONSHOT_API_KEY" ]; then
   PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$MOONSHOT_API_KEY" '. + {
