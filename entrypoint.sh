@@ -79,6 +79,33 @@ if [ -n "$MOONSHOT_API_KEY" ]; then
   }')
 fi
 
+if [ -n "$GOOGLE_API_KEY" ]; then
+  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$GOOGLE_API_KEY" '. + {
+    "google": {
+      "apiKey": $key
+    }
+  }')
+fi
+
+if [ -n "$XAI_API_KEY" ]; then
+  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$XAI_API_KEY" '. + {
+    "xai": {
+      "baseUrl": "https://api.x.ai/v1",
+      "api": "openai-completions",
+      "apiKey": $key,
+      "models": [
+        {
+          "id": "grok-3",
+          "name": "Grok 3",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0, "output": 0 }
+        }
+      ]
+    }
+  }')
+fi
+
 # Bot name/avatar
 BOT_NAME="${FASTCLAW_BOT_NAME:-Assistant}"
 BOT_AVATAR="${FASTCLAW_BOT_AVATAR:-🤖}"
