@@ -26,20 +26,30 @@ echo "[fastclaw] Building config for tier: $FASTCLAW_TIER"
 
 # Determine default model per tier
 case "$FASTCLAW_TIER" in
-  basic)
-    DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
-    ;;
-  pro)
-    DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
-    ;;
-  premium)
-    DEFAULT_MODEL="${FASTCLAW_MODEL:-moonshot/kimi-k2-0905-preview}"
-    ;;
+  basic|pro|premium) ;; # valid
   *)
     echo "[fastclaw] ERROR: Unknown tier '$FASTCLAW_TIER'. Use basic|pro|premium"
     exit 1
     ;;
 esac
+
+# Auto-detect default model from available API keys (user can override with FASTCLAW_MODEL)
+if [ -n "$FASTCLAW_MODEL" ]; then
+  DEFAULT_MODEL="$FASTCLAW_MODEL"
+elif [ -n "$MOONSHOT_API_KEY" ]; then
+  DEFAULT_MODEL="moonshot/kimi-k2-0905-preview"
+elif [ -n "$ANTHROPIC_API_KEY" ]; then
+  DEFAULT_MODEL="anthropic/claude-sonnet-4-20250514"
+elif [ -n "$OPENAI_API_KEY" ]; then
+  DEFAULT_MODEL="openai/gpt-4o"
+elif [ -n "$XAI_API_KEY" ]; then
+  DEFAULT_MODEL="xai/grok-3"
+elif [ -n "$GOOGLE_API_KEY" ]; then
+  DEFAULT_MODEL="google/gemini-2.5-flash"
+else
+  DEFAULT_MODEL="moonshot/kimi-k2-0905-preview"
+  echo "[fastclaw] WARNING: No API keys found — default model may not work"
+fi
 
 # Generate a gateway token if not provided
 GATEWAY_TOKEN="${FASTCLAW_GATEWAY_TOKEN:-$(head -c 32 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 32)}"
