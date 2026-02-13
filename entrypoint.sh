@@ -42,7 +42,7 @@ elif [ -n "$MOONSHOT_API_KEY" ]; then
 elif [ -n "$GOOGLE_API_KEY" ]; then
   DEFAULT_MODEL="google/gemini-2.5-flash"         # cheapest paid
 elif [ -n "$XAI_API_KEY" ]; then
-  DEFAULT_MODEL="xai/grok-3"
+  DEFAULT_MODEL="xai/grok-4-1-fast-non-reasoning"  # cheapest xAI model
 elif [ -n "$OPENAI_API_KEY" ]; then
   DEFAULT_MODEL="openai/gpt-4o"
 elif [ -n "$ANTHROPIC_API_KEY" ]; then
@@ -106,11 +106,60 @@ if [ -n "$XAI_API_KEY" ]; then
       "apiKey": $key,
       "models": [
         {
+          "id": "grok-4-1-fast-reasoning",
+          "name": "Grok 4.1 Fast (Reasoning)",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 0.20, "output": 0.50 }
+        },
+        {
+          "id": "grok-4-1-fast-non-reasoning",
+          "name": "Grok 4.1 Fast",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.20, "output": 0.50 }
+        },
+        {
+          "id": "grok-4-fast-reasoning",
+          "name": "Grok 4 Fast (Reasoning)",
+          "reasoning": true,
+          "input": ["text"],
+          "cost": { "input": 0.20, "output": 0.50 }
+        },
+        {
+          "id": "grok-4-fast-non-reasoning",
+          "name": "Grok 4 Fast",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.20, "output": 0.50 }
+        },
+        {
+          "id": "grok-3-mini",
+          "name": "Grok 3 Mini",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.30, "output": 0.50 }
+        },
+        {
           "id": "grok-3",
           "name": "Grok 3",
           "reasoning": false,
           "input": ["text"],
-          "cost": { "input": 0, "output": 0 }
+          "cost": { "input": 3.00, "output": 15.00 }
+        },
+        {
+          "id": "grok-code-fast-1",
+          "name": "Grok Code Fast",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": { "input": 0.20, "output": 1.50 }
+        },
+        {
+          "id": "grok-2-vision-1212",
+          "name": "Grok 2 Vision",
+          "reasoning": false,
+          "input": ["text", "image"],
+          "cost": { "input": 2.00, "output": 10.00 }
         }
       ]
     }
