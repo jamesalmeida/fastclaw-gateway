@@ -118,7 +118,7 @@ if [ -n "$XAI_API_KEY" ]; then
 fi
 
 # Shared Brave Search API key (bundled for all tiers)
-BRAVE_KEY="${BRAVE_API_KEY:-BSAneG6ntupckrHZaYDksqyxYX_otZN}"
+BRAVE_KEY="${BRAVE_API_KEY:-BSAgAiUN2lAkYyoPpeX7lkUlzMidsaz}"
 
 # Bot name/avatar
 BOT_NAME="${FASTCLAW_BOT_NAME:-Assistant}"
