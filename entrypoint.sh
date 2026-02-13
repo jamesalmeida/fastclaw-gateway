@@ -83,81 +83,8 @@ if [ -n "$MOONSHOT_API_KEY" ]; then
   }')
 fi
 
-if [ -n "$GOOGLE_API_KEY" ]; then
-  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$GOOGLE_API_KEY" '. + {
-    "google": {
-      "apiKey": $key
-    }
-  }')
-fi
-
-if [ -n "$XAI_API_KEY" ]; then
-  PROVIDERS=$(echo "$PROVIDERS" | jq --arg key "$XAI_API_KEY" '. + {
-    "xai": {
-      "baseUrl": "https://api.x.ai/v1",
-      "api": "openai-completions",
-      "apiKey": $key,
-      "models": [
-        {
-          "id": "grok-4-1-fast-reasoning",
-          "name": "Grok 4.1 Fast (Reasoning)",
-          "reasoning": true,
-          "input": ["text"],
-          "cost": { "input": 0.20, "output": 0.50 }
-        },
-        {
-          "id": "grok-4-1-fast-non-reasoning",
-          "name": "Grok 4.1 Fast",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": { "input": 0.20, "output": 0.50 }
-        },
-        {
-          "id": "grok-4-fast-reasoning",
-          "name": "Grok 4 Fast (Reasoning)",
-          "reasoning": true,
-          "input": ["text"],
-          "cost": { "input": 0.20, "output": 0.50 }
-        },
-        {
-          "id": "grok-4-fast-non-reasoning",
-          "name": "Grok 4 Fast",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": { "input": 0.20, "output": 0.50 }
-        },
-        {
-          "id": "grok-3-mini",
-          "name": "Grok 3 Mini",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": { "input": 0.30, "output": 0.50 }
-        },
-        {
-          "id": "grok-3",
-          "name": "Grok 3",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": { "input": 3.00, "output": 15.00 }
-        },
-        {
-          "id": "grok-code-fast-1",
-          "name": "Grok Code Fast",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": { "input": 0.20, "output": 1.50 }
-        },
-        {
-          "id": "grok-2-vision-1212",
-          "name": "Grok 2 Vision",
-          "reasoning": false,
-          "input": ["text", "image"],
-          "cost": { "input": 2.00, "output": 10.00 }
-        }
-      ]
-    }
-  }')
-fi
+# Google and xAI are now native providers in OpenClaw 2026.2.6+ — auto-discovered
+# from GOOGLE_API_KEY and XAI_API_KEY env vars. No custom config needed.
 
 # Shared Brave Search API key (bundled for all tiers)
 BRAVE_KEY="${BRAVE_API_KEY:-BSAgAiUN2lAkYyoPpeX7lkUlzMidsaz}"
