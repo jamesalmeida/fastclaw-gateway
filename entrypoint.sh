@@ -117,6 +117,9 @@ if [ -n "$XAI_API_KEY" ]; then
   }')
 fi
 
+# Shared Brave Search API key (bundled for all tiers)
+BRAVE_KEY="${BRAVE_API_KEY:-BSAneG6ntupckrHZaYDksqyxYX_otZN}"
+
 # Bot name/avatar
 BOT_NAME="${FASTCLAW_BOT_NAME:-Assistant}"
 BOT_AVATAR="${FASTCLAW_BOT_AVATAR:-🤖}"
@@ -151,6 +154,13 @@ cat > "$CONFIG_FILE" << JSONEOF
         "primary": "$DEFAULT_MODEL"
       },
       "workspace": "$WORKSPACE_DIR"
+    }
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "apiKey": "$BRAVE_KEY"
+      }
     }
   },
   "channels": {}
