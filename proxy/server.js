@@ -31,6 +31,11 @@ function stripProxyHeaders(req) {
   delete req.headers["x-forwarded-proto"];
   delete req.headers["x-forwarded-host"];
   delete req.headers["x-real-ip"];
+  // Rewrite origin to match what OpenClaw expects (loopback)
+  // so controlUi origin check passes through the proxy
+  if (req.headers["origin"]) {
+    req.headers["origin"] = `http://127.0.0.1:${GATEWAY_PORT}`;
+  }
 }
 
 const server = http.createServer((req, res) => {
