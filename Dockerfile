@@ -62,7 +62,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN useradd -m -s /bin/bash openclaw \
     && mkdir -p /data && chown openclaw:openclaw /data \
     && mkdir -p /home/openclaw/.openclaw/workspace \
-    && chown -R openclaw:openclaw /home/openclaw/.openclaw
+    && chown -R openclaw:openclaw /home/openclaw/.openclaw \
+    && chown -R openclaw:openclaw /usr/local/lib/node_modules \
+    && chown -R openclaw:openclaw /usr/local/bin
 
 # Copy default workspace files
 COPY workspace/ /home/openclaw/.openclaw/default-workspace/
