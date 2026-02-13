@@ -34,18 +34,19 @@ case "$FASTCLAW_TIER" in
 esac
 
 # Auto-detect default model from available API keys (user can override with FASTCLAW_MODEL)
+# Priority: cheapest to most expensive
 if [ -n "$FASTCLAW_MODEL" ]; then
   DEFAULT_MODEL="$FASTCLAW_MODEL"
 elif [ -n "$MOONSHOT_API_KEY" ]; then
-  DEFAULT_MODEL="moonshot/kimi-k2-0905-preview"
-elif [ -n "$ANTHROPIC_API_KEY" ]; then
-  DEFAULT_MODEL="anthropic/claude-sonnet-4-20250514"
-elif [ -n "$OPENAI_API_KEY" ]; then
-  DEFAULT_MODEL="openai/gpt-4o"
+  DEFAULT_MODEL="moonshot/kimi-k2-0905-preview"  # free
+elif [ -n "$GOOGLE_API_KEY" ]; then
+  DEFAULT_MODEL="google/gemini-2.5-flash"         # cheapest paid
 elif [ -n "$XAI_API_KEY" ]; then
   DEFAULT_MODEL="xai/grok-3"
-elif [ -n "$GOOGLE_API_KEY" ]; then
-  DEFAULT_MODEL="google/gemini-2.5-flash"
+elif [ -n "$OPENAI_API_KEY" ]; then
+  DEFAULT_MODEL="openai/gpt-4o"
+elif [ -n "$ANTHROPIC_API_KEY" ]; then
+  DEFAULT_MODEL="anthropic/claude-sonnet-4-20250514"  # most expensive
 else
   DEFAULT_MODEL="moonshot/kimi-k2-0905-preview"
   echo "[fastclaw] WARNING: No API keys found — default model may not work"
