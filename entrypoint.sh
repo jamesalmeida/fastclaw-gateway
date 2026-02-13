@@ -1,8 +1,7 @@
 #!/bin/bash
 set -e
 
-# Fix volume permissions (Railway mounts as root)
-chown -R openclaw:openclaw /data 2>/dev/null || true
+# Running as root — single-tenant sandboxed container
 
 STATE_DIR="/data/.openclaw"
 WORKSPACE_DIR="/data/workspace"
@@ -13,7 +12,7 @@ mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
 # Copy default workspace files if empty
 if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
   echo "[fastclaw] Copying default workspace files..."
-  cp -r /home/openclaw/.openclaw/default-workspace/* "$WORKSPACE_DIR/" 2>/dev/null || true
+  cp -r /root/.openclaw/default-workspace/* "$WORKSPACE_DIR/" 2>/dev/null || true
 fi
 
 # Validate tier
@@ -140,8 +139,6 @@ cat > "$CONFIG_FILE" << JSONEOF
 }
 JSONEOF
 
-chown -R openclaw:openclaw "$STATE_DIR" "$WORKSPACE_DIR"
-
 echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
 echo "[fastclaw] Tier: $FASTCLAW_TIER"
@@ -149,14 +146,14 @@ echo "[fastclaw] Gateway binds to loopback:${INTERNAL_GATEWAY_PORT:-18789}"
 echo "[fastclaw] Proxy on public port: ${PORT:-8080}"
 
 # Export for OpenClaw
-export HOME="/home/openclaw"
+export HOME="/root"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
 export OPENCLAW_GATEWAY_TOKEN="$GATEWAY_TOKEN"
 
-# Start gateway on loopback (as openclaw user)
+# Start gateway on loopback (running as root)
 echo "[fastclaw] Starting OpenClaw gateway..."
-gosu openclaw node /usr/local/lib/node_modules/openclaw/dist/entry.js gateway run \
+node /usr/local/lib/node_modules/openclaw/dist/entry.js gateway run \
   --bind loopback \
   --port "${INTERNAL_GATEWAY_PORT:-18789}" \
   --auth token \
@@ -173,9 +170,9 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-# Start reverse proxy on public port (as openclaw user)
+# Start reverse proxy on public port
 echo "[fastclaw] Starting reverse proxy on port ${PORT:-8080}..."
-gosu openclaw node /app/server.js &
+node /app/server.js &
 PROXY_PID=$!
 
 # Wait for either to exit

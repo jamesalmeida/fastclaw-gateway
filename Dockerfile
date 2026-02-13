@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.description="Actually Useful AI — managed OpenC
 
 # System deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git ca-certificates jq gosu ffmpeg \
+    curl git ca-certificates jq ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install CLI tools required by bundled OpenClaw skills
@@ -58,19 +58,13 @@ COPY proxy/server.js ./server.js
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Create user and directories
-RUN useradd -m -s /bin/bash openclaw \
-    && mkdir -p /data && chown openclaw:openclaw /data \
-    && mkdir -p /home/openclaw/.openclaw/workspace \
-    && chown -R openclaw:openclaw /home/openclaw/.openclaw \
-    && chown -R openclaw:openclaw /usr/local/lib/node_modules \
-    && chown -R openclaw:openclaw /usr/local/bin
+# Create data and workspace directories (running as root — single-tenant container)
+RUN mkdir -p /data /root/.openclaw/workspace
 
 # Copy default workspace files
-COPY workspace/ /home/openclaw/.openclaw/default-workspace/
-RUN chown -R openclaw:openclaw /home/openclaw/.openclaw/default-workspace
+COPY workspace/ /root/.openclaw/default-workspace/
 
-WORKDIR /home/openclaw/.openclaw/workspace
+WORKDIR /root/.openclaw/workspace
 
 ENV PORT=8080
 ENV INTERNAL_GATEWAY_PORT=18789
