@@ -13,6 +13,13 @@ mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
 if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
   echo "[fastclaw] Copying default workspace files..."
   cp -r /root/.openclaw/default-workspace/* "$WORKSPACE_DIR/" 2>/dev/null || true
+else
+  # Always update AGENTS.md and SOUL.md from image (managed files)
+  for f in AGENTS.md SOUL.md; do
+    if [ -f "/root/.openclaw/default-workspace/$f" ]; then
+      cp "/root/.openclaw/default-workspace/$f" "$WORKSPACE_DIR/$f"
+    fi
+  done
 fi
 
 # Validate tier
