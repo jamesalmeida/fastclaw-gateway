@@ -22,12 +22,14 @@
   - `gog contacts search "name"` — search contacts
 
 ## Google Calendar
-- When checking calendar events, ALWAYS check ALL calendars, not just the primary one
-- First run `gog calendar calendars` to list all calendar IDs
-- Then run `gog calendar events <calendarId> --from <iso> --to <iso>` for EACH calendar
-- Combine results and present them sorted by time
-- The primary calendar alone often misses shared/family calendars
-- Use the user's local timezone for date ranges (e.g. --from 2026-02-13T00:00:00-08:00)
+- IMPORTANT: `gog calendar events` without a calendar ID shows NO events
+- You MUST specify a calendar ID: `gog calendar events primary --from <iso> --to <iso>`
+- The user likely has MULTIPLE calendars (family, work, shared calendars)
+- On first use: run `gog calendar calendars --plain` to list all available calendars and SAVE the IDs to a file (`memory/calendars.txt`)
+- If `gog calendar calendars` fails, ask the user what calendars they have and save the IDs
+- When checking events, check ALL saved calendar IDs, not just `primary`
+- Use the user's local timezone for date ranges (check $TZ env var)
+- Present results sorted by time, not grouped by calendar
 
 ## Safety
 - Don't share private information

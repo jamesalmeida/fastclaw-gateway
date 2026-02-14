@@ -171,7 +171,7 @@ if [ -n "$GOG_GOOGLE_REFRESH_TOKEN" ] && [ -n "$GOG_GOOGLE_EMAIL" ]; then
   export GOG_ACCOUNT="$GOG_GOOGLE_EMAIL"
 
   # Build token file in gog's export format
-  GOG_SCOPES='["https://mail.google.com/","https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/contacts.readonly","https://www.googleapis.com/auth/documents","https://www.googleapis.com/auth/gmail.send","https://www.googleapis.com/auth/gmail.readonly","https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/tasks","https://www.googleapis.com/auth/drive"]'
+  GOG_SCOPES='["https://mail.google.com/","https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/calendar.events","https://www.googleapis.com/auth/calendar.readonly","https://www.googleapis.com/auth/contacts.readonly","https://www.googleapis.com/auth/documents","https://www.googleapis.com/auth/gmail.send","https://www.googleapis.com/auth/gmail.readonly","https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/tasks","https://www.googleapis.com/auth/drive"]'
   GOG_SERVICES='["gmail","calendar","drive","contacts","docs","sheets","tasks"]'
   
   cat > /tmp/gog_token.json <<TOKEOF
