@@ -170,23 +170,48 @@ if [ -n "$GOG_GOOGLE_REFRESH_TOKEN" ] && [ -n "$GOG_GOOGLE_EMAIL" ]; then
   # Set default account
   export GOG_ACCOUNT="$GOG_GOOGLE_EMAIL"
 
-  # Build token file in gog's export format
+  # Default scopes and services for all accounts
   GOG_SCOPES='["https://mail.google.com/","https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/calendar.events","https://www.googleapis.com/auth/calendar.readonly","https://www.googleapis.com/auth/contacts.readonly","https://www.googleapis.com/auth/documents","https://www.googleapis.com/auth/gmail.send","https://www.googleapis.com/auth/gmail.readonly","https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/tasks","https://www.googleapis.com/auth/drive"]'
   GOG_SERVICES='["gmail","calendar","drive","contacts","docs","sheets","tasks"]'
-  
-  cat > /tmp/gog_token.json <<TOKEOF
+
+  import_single_token() {
+    local email="$1"
+    local refresh_token="$2"
+    cat > /tmp/gog_token.json <<TOKEOF
 {
-  "email": "$GOG_GOOGLE_EMAIL",
+  "email": "$email",
   "services": $GOG_SERVICES,
   "scopes": $GOG_SCOPES,
   "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "refresh_token": "$GOG_GOOGLE_REFRESH_TOKEN"
+  "refresh_token": "$refresh_token"
 }
 TOKEOF
+    gog auth tokens import /tmp/gog_token.json --no-input 2>&1 || echo "[fastclaw] Warning: gog token import failed for $email"
+    rm -f /tmp/gog_token.json
+  }
 
-  # Import token into gog's keyring
-  gog auth tokens import /tmp/gog_token.json --no-input 2>&1 || echo "[fastclaw] Warning: gog token import failed"
-  rm -f /tmp/gog_token.json
+  # Multi-account: GOG_ACCOUNTS_JSON (base64-encoded JSON array)
+  if [ -n "${GOG_ACCOUNTS_JSON:-}" ]; then
+    echo "[fastclaw] Importing multiple Google accounts..."
+    ACCOUNTS_DECODED=$(echo "$GOG_ACCOUNTS_JSON" | base64 -d 2>/dev/null)
+    ACCOUNT_COUNT=$(echo "$ACCOUNTS_DECODED" | jq 'length' 2>/dev/null || echo "0")
+    
+    for i in $(seq 0 $((ACCOUNT_COUNT - 1))); do
+      ACC_EMAIL=$(echo "$ACCOUNTS_DECODED" | jq -r ".[$i].email")
+      ACC_TOKEN=$(echo "$ACCOUNTS_DECODED" | jq -r ".[$i].refresh_token")
+      if [ -n "$ACC_EMAIL" ] && [ "$ACC_EMAIL" != "null" ] && [ -n "$ACC_TOKEN" ] && [ "$ACC_TOKEN" != "null" ]; then
+        echo "[fastclaw] Importing account: $ACC_EMAIL"
+        import_single_token "$ACC_EMAIL" "$ACC_TOKEN"
+        # Set first account as default
+        if [ "$i" -eq 0 ]; then
+          export GOG_ACCOUNT="$ACC_EMAIL"
+        fi
+      fi
+    done
+  else
+    # Single account fallback (legacy env vars)
+    import_single_token "$GOG_GOOGLE_EMAIL" "$GOG_GOOGLE_REFRESH_TOKEN"
+  fi
 
   echo "[fastclaw] gog configured for $GOG_GOOGLE_EMAIL"
 else

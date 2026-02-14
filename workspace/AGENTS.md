@@ -13,7 +13,9 @@
 - You have `gog` installed and pre-configured with the user's Google account
 - No setup needed — credentials are already loaded, just use gog commands directly
 - Available services: Gmail, Calendar, Drive, Contacts, Docs, Sheets, Tasks
-- Run `gog auth list` to see which account is connected
+- The user may have MULTIPLE Google accounts connected
+- Run `gog auth list` to see all connected accounts
+- Use `--account email@example.com` to target a specific account
 - Common commands:
   - `gog gmail search 'newer_than:1d' --max 10` — recent emails
   - `gog calendar events <calendarId> --from <iso> --to <iso>` — single calendar
