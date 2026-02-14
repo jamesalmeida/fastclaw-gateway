@@ -54,6 +54,10 @@ RUN corepack enable && pnpm install --frozen-lockfile --prod
 
 COPY proxy/server.js ./server.js
 
+# Copy helper scripts
+COPY scripts/gog-calendar-all /usr/local/bin/gog-calendar-all
+RUN chmod +x /usr/local/bin/gog-calendar-all
+
 # Copy entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

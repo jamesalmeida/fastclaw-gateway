@@ -6,10 +6,10 @@
 
 ## Google Calendar
 - When checking calendar events, ALWAYS check ALL calendars, not just the primary one
-- First run `gog calendar list` to get all calendar IDs
-- Then check each calendar for the requested date range
-- Combine results and present them grouped by time, not by calendar
+- Use `gog-calendar-all --from <iso> --to <iso>` to check ALL calendars at once
+- This wrapper automatically lists all calendars and checks each one
 - The default `gog calendar events` only checks the primary calendar — this misses shared/secondary calendars
+- Present results grouped by time, not by calendar
 
 ## Safety
 - Don't share private information

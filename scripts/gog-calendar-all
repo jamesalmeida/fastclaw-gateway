@@ -1,0 +1,57 @@
+#!/bin/bash
+# gog-calendar-all: Check events across ALL calendars for a date range
+# Usage: gog-calendar-all --from <iso> --to <iso> [--account <email>]
+#
+# This wraps gog to check all calendars, not just the primary one.
+# gog's default `gog calendar events` only checks the primary calendar.
+
+set -e
+
+# Parse args
+FROM=""
+TO=""
+ACCOUNT_FLAG=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --from) FROM="$2"; shift 2 ;;
+    --to) TO="$2"; shift 2 ;;
+    --account) ACCOUNT_FLAG="--account $2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+if [ -z "$FROM" ] || [ -z "$TO" ]; then
+  echo "Usage: gog-calendar-all --from <iso-date> --to <iso-date> [--account <email>]"
+  echo "Example: gog-calendar-all --from 2026-02-16T00:00:00Z --to 2026-02-17T00:00:00Z"
+  exit 1
+fi
+
+# Get all calendar IDs
+CALENDARS=$(gog calendar list $ACCOUNT_FLAG --json 2>/dev/null | jq -r '.[].id' 2>/dev/null)
+
+if [ -z "$CALENDARS" ]; then
+  echo "No calendars found. Is gog authenticated?"
+  exit 1
+fi
+
+# Check each calendar
+FOUND_EVENTS=false
+while IFS= read -r cal_id; do
+  EVENTS=$(gog calendar events "$cal_id" --from "$FROM" --to "$TO" $ACCOUNT_FLAG --json 2>/dev/null || echo "[]")
+  
+  # Skip empty results
+  COUNT=$(echo "$EVENTS" | jq 'length' 2>/dev/null || echo "0")
+  if [ "$COUNT" -gt "0" ]; then
+    FOUND_EVENTS=true
+    # Get calendar name
+    CAL_NAME=$(gog calendar list $ACCOUNT_FLAG --json 2>/dev/null | jq -r ".[] | select(.id == \"$cal_id\") | .summary" 2>/dev/null || echo "$cal_id")
+    echo "=== $CAL_NAME ==="
+    echo "$EVENTS" | jq -r '.[] | "  \(.start.dateTime // .start.date) - \(.end.dateTime // .end.date): \(.summary)"' 2>/dev/null
+    echo ""
+  fi
+done <<< "$CALENDARS"
+
+if [ "$FOUND_EVENTS" = false ]; then
+  echo "No events found across any calendar for this date range."
+fi
