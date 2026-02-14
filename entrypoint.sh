@@ -163,21 +163,23 @@ if [ -n "$GOG_GOOGLE_REFRESH_TOKEN" ] && [ -n "$GOG_GOOGLE_EMAIL" ]; then
   # Set default account
   export GOG_ACCOUNT="$GOG_GOOGLE_EMAIL"
 
-  # Build a token JSON that gog expects
-  GOG_TOKEN_JSON=$(cat <<TOKEOF
+  # Build token file in gog's export format
+  GOG_SCOPES='["https://mail.google.com/","https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/contacts.readonly","https://www.googleapis.com/auth/documents","https://www.googleapis.com/auth/gmail.send","https://www.googleapis.com/auth/gmail.readonly","https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/tasks","https://www.googleapis.com/auth/drive"]'
+  GOG_SERVICES='["gmail","calendar","drive","contacts","docs","sheets","tasks"]'
+  
+  cat > /tmp/gog_token.json <<TOKEOF
 {
-  "access_token": "${GOG_GOOGLE_ACCESS_TOKEN:-}",
-  "refresh_token": "$GOG_GOOGLE_REFRESH_TOKEN",
-  "token_type": "Bearer",
-  "expiry": "${GOG_GOOGLE_TOKEN_EXPIRY:-2024-01-01T00:00:00Z}",
-  "scopes": "openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive"
+  "email": "$GOG_GOOGLE_EMAIL",
+  "services": $GOG_SERVICES,
+  "scopes": $GOG_SCOPES,
+  "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "refresh_token": "$GOG_GOOGLE_REFRESH_TOKEN"
 }
 TOKEOF
-  )
 
-  # Try gog auth import (if supported), fallback to direct keyring write
-  echo "$GOG_TOKEN_JSON" | gog auth import "$GOG_GOOGLE_EMAIL" --services gmail,calendar,drive,contacts,docs,sheets,tasks 2>/dev/null \
-    || echo "[fastclaw] Note: gog auth import not available — will need manual gog setup"
+  # Import token into gog's keyring
+  gog auth tokens import /tmp/gog_token.json --no-input 2>&1 || echo "[fastclaw] Warning: gog token import failed"
+  rm -f /tmp/gog_token.json
 
   echo "[fastclaw] gog configured for $GOG_GOOGLE_EMAIL"
 else
