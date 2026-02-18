@@ -155,6 +155,7 @@ if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
   jq --arg token "$FASTCLAW_TELEGRAM_BOT_TOKEN" \
      --arg allow "$TELEGRAM_ALLOW" \
      '.channels.telegram = {
+       "enabled": true,
        "botToken": $token
      } | if $allow != "" then .channels.telegram.allowFrom = ($allow | split(",")) else . end' \
      "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
