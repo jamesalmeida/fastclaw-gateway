@@ -144,7 +144,22 @@ cat > "$CONFIG_FILE" << JSONEOF
   },
   "channels": {}
 }
+
 JSONEOF
+
+# Inject Telegram channel if token is provided
+if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
+  echo "[fastclaw] Configuring Telegram channel..."
+  TELEGRAM_ALLOW="${TELEGRAM_ALLOW_FROM:-}"
+  TMP_CONFIG=$(mktemp)
+  jq --arg token "$FASTCLAW_TELEGRAM_BOT_TOKEN" \
+     --arg allow "$TELEGRAM_ALLOW" \
+     '.channels.telegram = {
+       "botToken": $token
+     } | if $allow != "" then .channels.telegram.allowFrom = ($allow | split(",")) else . end' \
+     "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
+  echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
+fi
 
 echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
