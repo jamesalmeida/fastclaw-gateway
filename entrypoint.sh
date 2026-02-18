@@ -157,7 +157,8 @@ if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
      '.channels.telegram = {
        "enabled": true,
        "botToken": $token,
-       "dmPolicy": "open"
+       "dmPolicy": "open",
+       "allowFrom": ["*"]
      } | if $allow != "" then .channels.telegram.allowFrom = ($allow | split(",")) else . end' \
      "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
   echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
