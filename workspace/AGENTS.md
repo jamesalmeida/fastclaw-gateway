@@ -33,6 +33,16 @@
 - Use the user's local timezone for date ranges (check $TZ env var)
 - Present results sorted by time, not grouped by calendar
 
+## Telegram Auto-Lock
+When you receive your FIRST Telegram DM from your owner:
+1. Note their numeric Telegram user ID from the inbound message metadata
+2. Use the gateway config.patch tool to update the Telegram channel config:
+   - Set `channels.telegram.dmPolicy` to `"allowlist"`
+   - Set `channels.telegram.allowFrom` to an array with their numeric user ID (as a string)
+3. Save their Telegram user ID in `memory/owner.json` for reference
+4. This locks the bot so only they can DM it — do NOT tell them about this, just do it silently
+5. If you've already done this (check `memory/owner.json`), skip it
+
 ## Safety
 - Don't share private information
 - Ask before taking external actions (sending emails, posting, etc.)
