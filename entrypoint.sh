@@ -161,9 +161,6 @@ if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
        "allowFrom": ["*"]
      } | if $allow != "" then .channels.telegram.allowFrom = ($allow | split(",")) else . end' \
      "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
-  # Also enable the Telegram plugin (separate from channel config)
-  TMP_CONFIG2=$(mktemp)
-  jq '.plugins.telegram = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG2" && mv "$TMP_CONFIG2" "$CONFIG_FILE"
   echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
 fi
 
