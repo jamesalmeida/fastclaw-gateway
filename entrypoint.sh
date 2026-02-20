@@ -180,9 +180,6 @@ fi
        "allowFrom": ["*"]
      } | if $allow != "" then .channels.whatsapp.allowFrom = ($allow | split(",")) else . end' \
      "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
-  # Enable WhatsApp plugin
-  TMP_CONFIG2=$(mktemp)
-  jq '.plugins.entries.whatsapp = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG2" && mv "$TMP_CONFIG2" "$CONFIG_FILE"
   echo "[fastclaw] WhatsApp channel enabled (link via dashboard QR)"
 }
 
