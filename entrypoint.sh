@@ -168,19 +168,8 @@ if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
   echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
 fi
 
-# Always enable WhatsApp channel (QR linking needs the provider available)
-{
-  echo "[fastclaw] Configuring WhatsApp channel..."
-  WA_ALLOW="${WHATSAPP_ALLOW_FROM:-}"
-  TMP_CONFIG=$(mktemp)
-  jq --arg allow "$WA_ALLOW" \
-     '.channels.whatsapp = {
-       "dmPolicy": "open",
-       "allowFrom": ["*"]
-     } | if $allow != "" then .channels.whatsapp.allowFrom = ($allow | split(",")) else . end' \
-     "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
-  echo "[fastclaw] WhatsApp channel enabled (link via dashboard QR)"
-}
+# WhatsApp: config added on-demand via dashboard connect flow (not pre-configured)
+# Pre-configuring causes doctor to remove it when no credentials exist
 
 echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
