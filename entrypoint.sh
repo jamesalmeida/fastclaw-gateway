@@ -168,8 +168,8 @@ if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
   echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
 fi
 
-# Inject WhatsApp channel if enabled (no token needed — QR linking happens at runtime)
-if [ -n "$FASTCLAW_WHATSAPP_ENABLED" ] && [ "$FASTCLAW_WHATSAPP_ENABLED" = "true" ]; then
+# Always enable WhatsApp channel (QR linking needs the provider available)
+{
   echo "[fastclaw] Configuring WhatsApp channel..."
   WA_ALLOW="${WHATSAPP_ALLOW_FROM:-}"
   TMP_CONFIG=$(mktemp)
@@ -184,7 +184,7 @@ if [ -n "$FASTCLAW_WHATSAPP_ENABLED" ] && [ "$FASTCLAW_WHATSAPP_ENABLED" = "true
   TMP_CONFIG2=$(mktemp)
   jq '.plugins.entries.whatsapp = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG2" && mv "$TMP_CONFIG2" "$CONFIG_FILE"
   echo "[fastclaw] WhatsApp channel enabled (link via dashboard QR)"
-fi
+}
 
 echo "[fastclaw] Config written to $CONFIG_FILE"
 echo "[fastclaw] Default model: $DEFAULT_MODEL"
