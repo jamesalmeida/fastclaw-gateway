@@ -175,7 +175,6 @@ fi
   TMP_CONFIG=$(mktemp)
   jq --arg allow "$WA_ALLOW" \
      '.channels.whatsapp = {
-       "enabled": true,
        "dmPolicy": "open",
        "allowFrom": ["*"]
      } | if $allow != "" then .channels.whatsapp.allowFrom = ($allow | split(",")) else . end' \
