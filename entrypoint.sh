@@ -108,7 +108,8 @@ cat > "$CONFIG_FILE" << JSONEOF
     "port": ${INTERNAL_GATEWAY_PORT:-18789},
     "controlUi": {
       "allowedOrigins": ["https://${RAILWAY_PUBLIC_DOMAIN:-localhost}", "https://sheldn.ai", "https://www.sheldn.ai"],
-      "allowInsecureAuth": true
+      "allowInsecureAuth": true,
+      "dangerouslyDisableDeviceAuth": true
     },
     "auth": {
       "mode": "token",
