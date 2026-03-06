@@ -145,36 +145,32 @@ cat > "$CONFIG_FILE" << JSONEOF
     }
   },
   "channels": {
-  "whatsapp": {
-    "enabled": true
-  }
+  "whatsapp": { "enabled": true },
+  "telegram": { "enabled": true },
+  "discord": { "enabled": true }
 }
 }
 
 JSONEOF
 
-# Enable WhatsApp plugin so QR login flow is available
+# Enable all channel plugins so they're ready for setup via dashboard
 TMP_CONFIG=$(mktemp)
-jq '.plugins.entries.whatsapp = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
-echo "[fastclaw] WhatsApp channel pre-configured (awaiting QR link)"
+jq '.plugins.entries.whatsapp = { "enabled": true } | .plugins.entries.telegram = { "enabled": true } | .plugins.entries.discord = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
+echo "[fastclaw] All channels pre-configured (WhatsApp, Telegram, Discord — awaiting user setup)"
 
-# Inject Telegram channel if token is provided
+# Inject Telegram bot token if provided via env var
 if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
-  echo "[fastclaw] Configuring Telegram channel..."
+  echo "[fastclaw] Configuring Telegram bot token..."
   TELEGRAM_ALLOW="${TELEGRAM_ALLOW_FROM:-}"
   TMP_CONFIG=$(mktemp)
   jq --arg token "$FASTCLAW_TELEGRAM_BOT_TOKEN" \
      --arg allow "$TELEGRAM_ALLOW" \
-     '.channels.telegram = {
-       "enabled": true,
+     '.channels.telegram += {
        "botToken": $token,
        "dmPolicy": "open",
        "allowFrom": ["*"]
      } | if $allow != "" then .channels.telegram.allowFrom = ($allow | split(",")) else . end' \
      "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
-  # Enable the Telegram plugin
-  TMP_CONFIG2=$(mktemp)
-  jq '.plugins.entries.telegram = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG2" && mv "$TMP_CONFIG2" "$CONFIG_FILE"
   echo "[fastclaw] Telegram bot configured${FASTCLAW_TELEGRAM_BOT_USERNAME:+ (@$FASTCLAW_TELEGRAM_BOT_USERNAME)}"
 fi
 
