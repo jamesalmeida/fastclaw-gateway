@@ -144,10 +144,19 @@ cat > "$CONFIG_FILE" << JSONEOF
       }
     }
   },
-  "channels": {}
+  "channels": {
+  "whatsapp": {
+    "enabled": true
+  }
+}
 }
 
 JSONEOF
+
+# Enable WhatsApp plugin so QR login flow is available
+TMP_CONFIG=$(mktemp)
+jq '.plugins.entries.whatsapp = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
+echo "[fastclaw] WhatsApp channel pre-configured (awaiting QR link)"
 
 # Inject Telegram channel if token is provided
 if [ -n "$FASTCLAW_TELEGRAM_BOT_TOKEN" ]; then
