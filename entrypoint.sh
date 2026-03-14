@@ -7,33 +7,44 @@ STATE_DIR="/data/.openclaw"
 WORKSPACE_DIR="/data/workspace"
 CONFIG_FILE="$STATE_DIR/openclaw.json"
 
-mkdir -p "$STATE_DIR" "$WORKSPACE_DIR" "$STATE_DIR/identity"
+mkdir -p "$STATE_DIR" "$WORKSPACE_DIR" "$STATE_DIR/identity" "$STATE_DIR/devices"
 
 # Generate device identity if it doesn't exist (required by OpenClaw gateway)
 IDENTITY_FILE="$STATE_DIR/identity/device.json"
 DEVICE_AUTH_FILE="$STATE_DIR/identity/device-auth.json"
+PAIRED_FILE="$STATE_DIR/devices/paired.json"
+PENDING_FILE="$STATE_DIR/devices/pending.json"
+
+# Always ensure devices files exist
+[ -f "$PAIRED_FILE" ] || echo '{}' > "$PAIRED_FILE"
+[ -f "$PENDING_FILE" ] || echo '{}' > "$PENDING_FILE"
 
 if [ ! -f "$IDENTITY_FILE" ]; then
   echo "[fastclaw] Generating device identity..."
-  node -e "
+  IDENTITY_DIR="$STATE_DIR/identity" node -e "
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const dir = process.env.IDENTITY_DIR;
 const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
 const pubPem = publicKey.export({ type: 'spki', format: 'pem' });
 const privPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
 const pubDer = publicKey.export({ type: 'spki', format: 'der' });
 const deviceId = crypto.createHash('sha256').update(pubDer).digest('hex');
 const identity = { version: 1, deviceId, publicKeyPem: pubPem, privateKeyPem: privPem, createdAtMs: Date.now() };
-const fs = require('fs');
-fs.writeFileSync('$IDENTITY_FILE', JSON.stringify(identity, null, 2), { mode: 0o600 });
+fs.writeFileSync(path.join(dir, 'device.json'), JSON.stringify(identity, null, 2), { mode: 0o600 });
 // Also create device-auth with an operator token
 const token = crypto.randomBytes(32).toString('base64url');
 const auth = { version: 1, deviceId, tokens: { operator: { token, role: 'operator', scopes: ['operator.admin'], updatedAtMs: Date.now() } } };
-fs.writeFileSync('$DEVICE_AUTH_FILE', JSON.stringify(auth, null, 2), { mode: 0o600 });
+fs.writeFileSync(path.join(dir, 'device-auth.json'), JSON.stringify(auth, null, 2), { mode: 0o600 });
 console.log('[fastclaw] Device identity created: ' + deviceId.slice(0, 16) + '...');
 "
 else
   echo "[fastclaw] Device identity exists, skipping generation"
 fi
+
+# Debug: confirm identity files exist
+echo "[fastclaw] Identity files: $(ls $STATE_DIR/identity/ 2>/dev/null)"
 
 # Copy default workspace files if empty
 if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
