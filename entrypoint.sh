@@ -51,8 +51,9 @@ if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
   echo "[fastclaw] Copying default workspace files..."
   cp -r /root/.openclaw/default-workspace/* "$WORKSPACE_DIR/" 2>/dev/null || true
 else
-  # Always update AGENTS.md and SOUL.md from image (managed files)
-  for f in AGENTS.md SOUL.md; do
+  # Always update AGENTS.md from image (managed framework file — never user-edited)
+  # SOUL.md is user-owned and must NOT be overwritten on redeploy
+  for f in AGENTS.md; do
     if [ -f "/root/.openclaw/default-workspace/$f" ]; then
       cp "/root/.openclaw/default-workspace/$f" "$WORKSPACE_DIR/$f"
     fi
