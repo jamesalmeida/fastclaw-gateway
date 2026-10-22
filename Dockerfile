@@ -1,4 +1,4 @@
-FROM node:22-bookworm
+FROM node:24.22.1-bookworm
 
 LABEL org.opencontainers.image.source="https://github.com/jamesalmeida/fastclaw-gateway"
 LABEL org.opencontainers.image.description="Actually Useful AI — managed OpenClaw gateway"
@@ -44,8 +44,11 @@ RUN set -eux; \
     install -m 0755 "${HIMALAYA_BIN}" /usr/local/bin/himalaya; \
     rm -rf /tmp/himalaya-extract /tmp/himalaya.tgz
 
-# Install OpenClaw globally
-RUN npm install -g openclaw@latest @google/gemini-cli @steipete/summarize
+# Install OpenClaw globally.
+# Node 24 ships npm 11, which skips dependency lifecycle scripts unless they
+# are explicitly allowed. OpenClaw's postinstall (bundled plugins) and native
+# dependencies such as node-pty and esbuild must run, matching Node 22 behavior.
+RUN npm install -g --dangerously-allow-all-scripts openclaw@latest @google/gemini-cli @steipete/summarize
 
 # Create app directory for the proxy server
 WORKDIR /app

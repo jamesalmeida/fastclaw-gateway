@@ -9,42 +9,8 @@ CONFIG_FILE="$STATE_DIR/openclaw.json"
 
 mkdir -p "$STATE_DIR" "$WORKSPACE_DIR" "$STATE_DIR/identity" "$STATE_DIR/devices"
 
-# Generate device identity if it doesn't exist (required by OpenClaw gateway)
-IDENTITY_FILE="$STATE_DIR/identity/device.json"
-DEVICE_AUTH_FILE="$STATE_DIR/identity/device-auth.json"
-PAIRED_FILE="$STATE_DIR/devices/paired.json"
-PENDING_FILE="$STATE_DIR/devices/pending.json"
-
-# Always ensure devices files exist
-[ -f "$PAIRED_FILE" ] || echo '{}' > "$PAIRED_FILE"
-[ -f "$PENDING_FILE" ] || echo '{}' > "$PENDING_FILE"
-
-if [ ! -f "$IDENTITY_FILE" ]; then
-  echo "[fastclaw] Generating device identity..."
-  IDENTITY_DIR="$STATE_DIR/identity" node -e "
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-const dir = process.env.IDENTITY_DIR;
-const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
-const pubPem = publicKey.export({ type: 'spki', format: 'pem' });
-const privPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
-const pubDer = publicKey.export({ type: 'spki', format: 'der' });
-const deviceId = crypto.createHash('sha256').update(pubDer).digest('hex');
-const identity = { version: 1, deviceId, publicKeyPem: pubPem, privateKeyPem: privPem, createdAtMs: Date.now() };
-fs.writeFileSync(path.join(dir, 'device.json'), JSON.stringify(identity, null, 2), { mode: 0o600 });
-// Also create device-auth with an operator token
-const token = crypto.randomBytes(32).toString('base64url');
-const auth = { version: 1, deviceId, tokens: { operator: { token, role: 'operator', scopes: ['operator.admin'], updatedAtMs: Date.now() } } };
-fs.writeFileSync(path.join(dir, 'device-auth.json'), JSON.stringify(auth, null, 2), { mode: 0o600 });
-console.log('[fastclaw] Device identity created: ' + deviceId.slice(0, 16) + '...');
-"
-else
-  echo "[fastclaw] Device identity exists, skipping generation"
-fi
-
-# Debug: confirm identity files exist
-echo "[fastclaw] Identity files: $(ls $STATE_DIR/identity/ 2>/dev/null)"
+# OpenClaw stores device identity in its state database. A legacy
+# identity/device.json file blocks gateway startup until doctor imports it.
 
 # Copy default workspace files if empty
 if [ -z "$(ls -A "$WORKSPACE_DIR" 2>/dev/null)" ]; then
@@ -145,19 +111,11 @@ cat > "$CONFIG_FILE" << JSONEOF
     "bind": "loopback",
     "port": ${INTERNAL_GATEWAY_PORT:-18789},
     "controlUi": {
-      "allowedOrigins": ["https://${RAILWAY_PUBLIC_DOMAIN:-localhost}", "https://sheldn.ai", "https://www.sheldn.ai"],
-      "allowInsecureAuth": true,
-      "dangerouslyDisableDeviceAuth": true
+      "allowedOrigins": ["https://${RAILWAY_PUBLIC_DOMAIN:-localhost}", "https://sheldn.ai", "https://www.sheldn.ai"]
     },
     "auth": {
       "mode": "token",
       "token": "$GATEWAY_TOKEN"
-    }
-  },
-  "ui": {
-    "assistant": {
-      "name": "$BOT_NAME",
-      "avatar": "$BOT_AVATAR"
     }
   },
   "update": {
@@ -175,13 +133,6 @@ cat > "$CONFIG_FILE" << JSONEOF
       "workspace": "$WORKSPACE_DIR"
     }
   },
-  "tools": {
-    "web": {
-      "search": {
-        "apiKey": "$BRAVE_KEY"
-      }
-    }
-  },
   "channels": {
   "whatsapp": { "enabled": true },
   "telegram": { "enabled": true },
@@ -193,7 +144,14 @@ JSONEOF
 
 # Enable all channel plugins so they're ready for setup via dashboard
 TMP_CONFIG=$(mktemp)
-jq '.plugins.entries.whatsapp = { "enabled": true } | .plugins.entries.telegram = { "enabled": true } | .plugins.entries.discord = { "enabled": true }' "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
+jq --arg name "$BOT_NAME" --arg avatar "$BOT_AVATAR" --arg brave "$BRAVE_KEY" \
+  '.plugins.entries.whatsapp = { "enabled": true }
+   | .plugins.entries.telegram = { "enabled": true }
+   | .plugins.entries.discord = { "enabled": true }
+   | .plugins.entries.brave = { "enabled": true, "config": { "webSearch": { "apiKey": $brave } } }
+   | .agents.entries.main = {
+       "identity": { "name": $name, "emoji": $avatar, "avatar": $avatar }
+     }' "$CONFIG_FILE" > "$TMP_CONFIG" && mv "$TMP_CONFIG" "$CONFIG_FILE"
 echo "[fastclaw] All channels pre-configured (WhatsApp, Telegram, Discord — awaiting user setup)"
 
 # Inject Telegram bot token if provided via env var
@@ -292,6 +250,13 @@ export HOME="/root"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
 export OPENCLAW_GATEWAY_TOKEN="$GATEWAY_TOKEN"
+
+# Import state written by the previous image (legacy device.json and pairing files).
+if [ -f "$STATE_DIR/identity/device.json" ] || [ -f "$STATE_DIR/devices/paired.json" ] || [ -f "$STATE_DIR/devices/pending.json" ]; then
+  echo "[fastclaw] Importing legacy OpenClaw state..."
+  node /usr/local/lib/node_modules/openclaw/dist/entry.js doctor --fix --yes \
+    || echo "[fastclaw] Warning: legacy OpenClaw state import failed"
+fi
 
 # Start gateway on loopback (running as root)
 echo "[fastclaw] Starting OpenClaw gateway..."
